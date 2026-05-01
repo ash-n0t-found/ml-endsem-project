@@ -166,5 +166,28 @@
     "sub-032": "C:\\Users\\Ashritha\\Desktop\\college\\ml-project\\processed\\sub-032_hest.h5",
     "sub-034": "C:\\Users\\Ashritha\\Desktop\\college\\ml-project\\processed\\sub-034_hest.h5",
     "sub-035": "C:\\Users\\Ashritha\\Desktop\\college\\ml-project\\processed\\sub-035_hest.h5"
-  }
+  },
+  "hest_flat_dim": 5760,
+  "hest_shape": [
+    9,
+    4,
+    160
+  ],
+  "target_channels": [
+    "Fz",
+    "FCz",
+    "Cz",
+    "F3",
+    "F4",
+    "FC3",
+    "FC4",
+    "Pz",
+    "CPz"
+  ],
+  "freq_bands": [
+    "theta",
+    "alpha_low",
+    "alpha_high",
+    "beta_low"
+  ]
 }
