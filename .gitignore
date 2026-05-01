@@ -1,0 +1,17 @@
+# dataset
+dataset/
+
+# virtual env
+venv/
+
+# python cache
+__pycache__/
+*.pyc
+
+# outputs
+processed/*.h5
+processed/preprocessing_qc.json
+
+# OS junk
+.DS_Store
+Thumbs.db

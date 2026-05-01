@@ -1,0 +1,9 @@
+{
+  "baseline_2s": "rest",
+  "encoding_set_simultaneous": "simultaneous",
+  "rest": "rest",
+  "retention_fast": "fast",
+  "retention_fastdelay": "fast",
+  "retention_simultaneous": "simultaneous",
+  "retention_slow": "slow"
+}
