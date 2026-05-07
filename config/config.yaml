@@ -1,0 +1,414 @@
+# ============================================================
+# ds003838 Multimodal Physiological Coupling Framework
+# Configuration File
+# ============================================================
+
+project:
+  name: "ds003838_coupling"
+  version: "1.0.0"
+  description: "Cross-modal physiological coupling as mechanistic signature of WM overload"
+  random_seed: 42
+
+# ============================================================
+# PATHS
+# ============================================================
+paths:
+  dataset_root: "C:/Users/Ashritha/Dataset"
+  output_root: "./outputs"
+  cache_dir: "./cache"
+  figures_dir: "./outputs/figures"
+  results_dir: "./outputs/results"
+  models_dir: "./outputs/models"
+  logs_dir: "./outputs/logs"
+
+# ============================================================
+# SUBJECTS
+# ============================================================
+subjects:
+  # Full clean subset (53 subjects)
+  all_clean:
+    - "sub-032" 
+    - "sub-033" 
+    - "sub-034" 
+    - "sub-035" 
+    - "sub-036"
+    - "sub-038" 
+    - "sub-039" 
+    - "sub-040" 
+    - "sub-041" 
+    - "sub-042"
+    - "sub-043" 
+    - "sub-044" 
+    - "sub-045" 
+    - "sub-046" 
+    - "sub-047"
+    - "sub-048" 
+    - "sub-049" 
+    - "sub-050" 
+    - "sub-051" 
+    - "sub-052"
+    - "sub-053" 
+    - "sub-054" 
+    - "sub-055" 
+    - "sub-056" 
+    - "sub-057"
+    - "sub-058" 
+    - "sub-059" 
+    - "sub-060" 
+    - "sub-061" 
+    - "sub-062"
+    - "sub-063" 
+    - "sub-064" 
+    - "sub-065" 
+    - "sub-067" 
+    - "sub-068"
+    - "sub-069" 
+    - "sub-070" 
+    - "sub-071" 
+    - "sub-072" 
+    - "sub-073"
+    - "sub-074" 
+    - "sub-075" 
+    - "sub-076" 
+    - "sub-077" 
+    - "sub-078"
+    - "sub-079" 
+    - "sub-080" 
+    - "sub-081" 
+    - "sub-082" 
+    - "sub-083"
+    - "sub-084" 
+    - "sub-085" 
+    - "sub-086"
+
+  # Initial dev subset — 10 subjects
+  # sub-032: Paper 4 reference subject (validation anchor)
+  # sub-033..042: consecutive clean block, modality completeness verified
+  development:
+    - "sub-032"
+    - "sub-033"
+    - "sub-034"
+    - "sub-035"
+    - "sub-036"
+    - "sub-038"
+    - "sub-039"
+    - "sub-040"
+    - "sub-041"
+    - "sub-042"
+
+  # Subjects excluded (missing modalities)
+  excluded:
+    - "sub-013" 
+    - "sub-014" 
+    - "sub-015" 
+    - "sub-016" 
+    - "sub-017"
+    - "sub-018" 
+    - "sub-019" 
+    - "sub-020" 
+    - "sub-021" 
+    - "sub-022"
+    - "sub-023" 
+    - "sub-024" 
+    - "sub-025" 
+    - "sub-026" 
+    - "sub-027"
+    - "sub-028" 
+    - "sub-029" 
+    - "sub-030" 
+    - "sub-031"
+    - "sub-037"
+    - "sub-066"
+    - "sub-094"
+
+# ============================================================
+# PARADIGM / CONDITIONS
+# ============================================================
+paradigm:
+  name: "auditory_digit_span"
+  conditions:
+    control:
+      label: 0
+      n_digits: 0
+      description: "Resting / control baseline"
+    load_5:
+      label: 1
+      n_digits: 5
+      description: "Low cognitive load"
+    load_9:
+      label: 2
+      n_digits: 9
+      description: "Medium load / peak engagement"
+    load_13:
+      label: 3
+      n_digits: 13
+      description: "Overload / WM capacity exceeded"
+  
+  # Event markers in EEG data (verify against actual .fif events)
+  event_ids:
+    trial_start: 1
+    digit_onset: 2
+    recall_start: 3
+    trial_end: 4
+    condition_5: 5
+    condition_9: 9
+    condition_13: 13
+
+# ============================================================
+# EEG PREPROCESSING
+# ============================================================
+eeg:
+  # Raw signal parameters
+  expected_sfreq: 500.0       # Hz — verify against actual files
+  n_channels: 64
+  reference: "average"        # average reference
+  
+  # Bandpass filter
+  filter:
+    l_freq: 1.0               # Hz
+    h_freq: 40.0              # Hz
+    method: "firwin"
+    fir_window: "hamming"
+  
+  # Notch filter (powerline)
+  notch:
+    freqs: [50.0]             # Hz (India: 50 Hz)
+    
+  # Epoching
+  epochs:
+    encoding_tmin: 0.0        # s relative to trial start
+    encoding_tmax: 4.0        # s (adjust to actual encoding window)
+    retention_tmin: 4.0
+    retention_tmax: 8.0
+    baseline: [-0.2, 0.0]
+    reject_peak_to_peak: 150e-6  # V — reject epochs with > 150µV
+  
+  # ICA artifact removal
+  ica:
+    n_components: 25
+    method: "fastica"
+    random_state: 42
+    eog_channels: ["Fp1", "Fp2"]  # proxy for eye artifacts
+    
+  # Frequency bands
+  bands:
+    delta: [1.0, 4.0]
+    theta: [4.0, 8.0]
+    alpha: [8.0, 12.0]
+    beta: [12.0, 30.0]
+    gamma: [30.0, 40.0]
+  
+  # Frontal midline theta ROI
+  theta_roi: ["Fz", "FCz", "Cz"]
+  
+  # Posterior alpha ROI
+  alpha_roi: ["P3", "Pz", "P4", "O1", "Oz", "O2"]
+  
+  # CSP parameters
+  csp:
+    n_components: 6
+    reg: "ledoit_wolf"
+    
+  # ERP windows (ms post-stimulus, converted internally to s)
+  erp:
+    p300:
+      tmin: 0.300
+      tmax: 0.600
+      channels: ["Pz", "P3", "P4"]
+    n200:
+      tmin: 0.200
+      tmax: 0.350
+      channels: ["FC1", "FCz", "FC2"]
+
+  # Resting state
+  resting:
+    duration_s: 240           # 4-minute resting recording
+    eyes_closed: true
+    iaf_range: [6.0, 14.0]   # Hz — search range for Individual Alpha Frequency
+
+# ============================================================
+# ECG / HRV
+# ============================================================
+ecg:
+  expected_sfreq: 500.0       # Hz — same as EEG if co-recorded
+  r_peak_method: "neurokit"   # NeuroKit2 R-peak detection algorithm
+  
+  # HRV features
+  hrv:
+    time_domain: ["RMSSD", "SDNN", "pNN50", "MeanNN"]
+    freq_domain:
+      hf: [0.15, 0.40]        # Hz — vagal / parasympathetic
+      lf: [0.04, 0.15]        # Hz — sympathovagal
+      vlf: [0.003, 0.04]      # Hz
+      method: "welch"
+      nperseg: 256
+      
+  # Heartbeat-Evoked Potential (HEP) — cross-modal feature
+  hep:
+    tmin: -0.1                # s pre R-peak
+    tmax: 0.6                 # s post R-peak
+    channels_of_interest: ["Fz", "Cz", "FCz"]
+    analysis_window: [0.2, 0.6]  # s — HEP amplitude window
+
+# ============================================================
+# PPG
+# ============================================================
+ppg:
+  expected_sfreq: 500.0       # Hz
+  peak_method: "neurokit"
+  
+  features:
+    - "pulse_wave_amplitude"      # trough-to-peak
+    - "inter_beat_interval"       # from PPG peaks
+    - "pwa_slope"                 # temporal derivative across trial
+    - "waveform_entropy"          # sample entropy of pulse morphology
+    - "ppg_ibi_rmssd"             # RMSSD from PPG IBI series
+
+# ============================================================
+# PUPILLOMETRY
+# ============================================================
+pupil:
+  expected_sfreq: 120.0       # Hz — typical Eyelink sampling rate; verify
+  unit: "arbitrary"           # or "mm" — check dataset documentation
+  
+  # Blink detection / interpolation
+  blink:
+    threshold_sd: 3.0         # SD threshold for blink detection
+    interpolation_method: "linear"
+    min_valid_proportion: 0.7 # reject trial if < 70% valid samples
+  
+  # Baseline normalization
+  baseline:
+    method: "percent_change"  # (trial - baseline) / baseline * 100
+    window: [-0.5, 0.0]       # s pre-stimulus
+  
+  # Features
+  features:
+    mean_window: [0.0, 4.0]   # s — encoding window mean diameter
+    peak_latency: true
+    dilation_rate: true       # slope at onset (0-1s)
+    tepr_per_digit: true      # task-evoked pupil response per digit
+    dfa_alpha: true           # detrended fluctuation analysis exponent
+
+# ============================================================
+# GAUSSIAN GRAPHICAL MODEL (GGM)
+# ============================================================
+ggm:
+  # Feature dimensionality target for primary GGM analysis
+  # Reduce to D=40-60 for primary; full-dim in supplementary
+  primary_max_features: 60
+  
+  # GraphicalLassoCV parameters
+  graphical_lasso:
+    cv: 5
+    max_iter: 1000
+    tol: 1e-4
+    alphas: 10                # number of alpha values in CV grid
+    
+  # Stability selection (Meinshausen-Bühlmann)
+  stability_selection:
+    n_subsamples: 100
+    subsample_size: 0.5       # fraction of samples
+    pi_threshold: 0.6         # stability threshold for edge inclusion
+    
+  # Network topology metrics
+  topology:
+    compute_clustering: true
+    compute_betweenness: true
+    compute_diameter: true
+    
+  # Statistical testing
+  permutation_test:
+    n_permutations: 1000
+    fdr_method: "bh"          # Benjamini-Hochberg
+    alpha: 0.05
+
+# ============================================================
+# PARTIAL INFORMATION DECOMPOSITION (Gaussian)
+# ============================================================
+pid:
+  # Reduce each modality to n_pcs for PID — ensures Gaussianity + sample adequacy
+  n_pcs_per_modality: 3
+  bootstrap_n: 500
+  bootstrap_ci: 0.95
+
+# ============================================================
+# LINEAR GAUSSIAN STATE SPACE MODEL (LGSSM)
+# ============================================================
+lgssm:
+  latent_dim: 2               # k — latent cognitive load state dim
+  em_max_iter: 200
+  em_tol: 1e-6
+  n_restarts: 5               # EM restarts (avoid local optima)
+  
+# ============================================================
+# BAYESIAN ONLINE CHANGEPOINT DETECTION (BOCPD)
+# ============================================================
+bocpd:
+  hazard_rate: 0.1            # prior probability of changepoint per observation
+  threshold: 0.5              # posterior probability threshold for changepoint call
+
+# ============================================================
+# RECALL PREDICTION
+# ============================================================
+recall_prediction:
+  # Ridge regression
+  ridge:
+    alphas: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
+    cv: "loso"                # leave-one-subject-out
+    
+  # Feature sets to compare
+  feature_sets:
+    - "per_modality_only"     # B3-equivalent baseline
+    - "coupling_only"         # novel contribution
+    - "per_modality_plus_coupling"  # full model
+    - "resting_coupling_only" # zero-shot personalization
+    
+  # Statistical test
+  significance_test: "wilcoxon_signed_rank"
+  
+  # Targets
+  targets:
+    - "condition_label"       # 4-class classification (comparability with Papers 5/6)
+    - "recall_accuracy"       # continuous — main contribution
+
+# ============================================================
+# BASELINES
+# ============================================================
+baselines:
+  B1: "catch22_xgboost_per_modality"
+  B2: "late_fusion_per_modality_classifiers"
+  B3: "early_fusion_concatenated_no_coupling"
+  B4: "full_covariance_features"
+  B5: "eeg_pupil_pearson_correlation"
+  B6: "pca_full_multimodal"
+
+# ============================================================
+# MODALITY ORDERING (consistent indexing throughout codebase)
+# ============================================================
+modalities:
+  - name: "eeg"
+    index: 0
+  - name: "ecg"
+    index: 1
+  - name: "ppg"
+    index: 2
+  - name: "pupil"
+    index: 3
+
+# Modality pairs for coupling analysis
+modality_pairs:
+  - ["eeg", "ecg"]    # HEP coupling — prefrontal-vagal
+  - ["eeg", "ppg"]    # cortical-peripheral
+  - ["eeg", "pupil"]  # LC-NE shared driver (key prediction)
+  - ["ecg", "ppg"]    # cardiac-peripheral
+  - ["ecg", "pupil"]  # sympathovagal-pupil
+  - ["ppg", "pupil"]  # sympathetic co-activation (key prediction)
+
+# ============================================================
+# LOGGING
+# ============================================================
+logging:
+  level: "INFO"
+  format: "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+  save_to_file: true

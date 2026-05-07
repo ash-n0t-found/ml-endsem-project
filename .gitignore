@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+venv/
+.env/
+
+# Dataset
+Dataset/
+ds003838/
+*.set
+*.fdt
+*.edf
+*.bdf
+*.vhdr
+*.eeg
+*.vmrk
+*.tsv.gz
+
+# Outputs
+outputs/
+logs/
+results/
+cache/
+*.npz
+*.pkl
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
