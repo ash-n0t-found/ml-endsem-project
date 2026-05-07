@@ -193,7 +193,7 @@ class BIDSDatasetInspector:
 
     def _find_pupil_file(self, subj_dir: Path, task: str) -> Optional[Path]:
         """Search for pupillometry TSV."""
-        for search_dir in [subj_dir / "eyetrack", subj_dir / "eeg", subj_dir]:
+        for search_dir in [subj_dir / "pupil", subj_dir / "eyetrack", subj_dir / "eeg", subj_dir]:
             if not search_dir.exists():
                 continue
             for pattern in [
@@ -344,7 +344,19 @@ class SubjectDataLoader:
         Actual column names vary by dataset — inspect and remap.
         """
         try:
-            df = pd.read_csv(path, sep="\t", low_memory=False)
+            df = pd.read_csv(
+                path, 
+                sep="\t",
+                low_memory=True,
+                memory_map=True,
+                engine="c",
+                usecols=[
+                    "pupil_timestamp",
+                    "confidence",
+                    "diameter",
+                    "blink"
+                ]
+            )
             logger.debug(f"Pupil TSV loaded: {path.name} | shape={df.shape} | cols={list(df.columns[:8])}")
             df = self._normalize_pupil_columns(df)
             return df
@@ -407,28 +419,52 @@ class SubjectDataLoader:
             return None
 
     def _normalize_behavioral_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Standardize behavioral column names."""
-        # Map common variants to standard names
+        """Standardize behavioral column names.
+
+        Guards ensure at most one column maps to each standard name,
+        preventing duplicate-column DataFrames that break downstream
+        pd.to_numeric calls in the validator.
+        """
         renames = {}
+        # Track which target names are already claimed (either already in df
+        # as a native column, or already claimed by a previous rename).
+        claimed: set = set(df.columns)
 
         for c in df.columns:
+            if c in renames:
+                # Already being renamed — skip
+                continue
             cl = c.lower()
             if any(x in cl for x in ["accuracy", "correct", "score", "recall"]):
-                if "recall_accuracy" not in df.columns:
-                    renames[c] = "recall_accuracy"
+                target = "recall_accuracy"
+                # Only rename if the target doesn't already exist in df
+                # and hasn't been claimed by an earlier rename
+                if target not in claimed or c == target:
+                    if c != target:
+                        renames[c] = target
+                        claimed.add(target)
             elif any(x in cl for x in ["condition", "load", "n_digit", "ndigit"]):
-                if "condition" not in df.columns:
-                    renames[c] = "condition"
-            elif any(x in cl for x in ["trial", "trial_n", "trial_num"]):
-                if "trial_idx" not in df.columns:
-                    renames[c] = "trial_idx"
+                target = "condition"
+                if target not in claimed or c == target:
+                    if c != target:
+                        renames[c] = target
+                        claimed.add(target)
+            elif any(x in cl for x in ["trial_n", "trial_num", "trialnumber"]):
+                target = "trial_idx"
+                if target not in claimed or c == target:
+                    if c != target:
+                        renames[c] = target
+                        claimed.add(target)
 
         return df.rename(columns=renames)
 
     def _load_events_tsv(self, path: Path) -> Optional[pd.DataFrame]:
         """Load BIDS events TSV: onset, duration, trial_type columns."""
         try:
-            df = pd.read_csv(path, sep="\t")
+            df = pd.read_csv(
+                path,
+                sep="\t",
+            )
             logger.debug(f"Events loaded: {path.name} | n_events={len(df)}")
             return df
         except Exception as e:

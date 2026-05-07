@@ -16,6 +16,7 @@ Produces a per-subject validation report and quality flags.
 
 from __future__ import annotations
 
+from unittest import result
 import warnings
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
@@ -266,13 +267,27 @@ class SubjectValidator:
             )
             return
 
-        acc = df["recall_accuracy"].dropna()
-        result.quality_flags["mean_recall_accuracy"] = float(acc.mean())
-        result.quality_flags["recall_accuracy_range"] = (float(acc.min()), float(acc.max()))
+        # Extract recall_accuracy as a clean 1-D Series.
+        # Guard against duplicate columns (e.g. from malformed TSVs) which
+        # cause df["recall_accuracy"] to return a DataFrame instead of a Series.
+        raw_col = df["recall_accuracy"]
+        if isinstance(raw_col, pd.DataFrame):
+            # Duplicate column present — take first occurrence and warn
+            result.add_warning(
+                "Duplicate 'recall_accuracy' columns detected in behavioral data — "
+                "using first occurrence"
+            )
+            raw_col = raw_col.iloc[:, 0]
+
+        acc = pd.to_numeric(raw_col, errors="coerce").dropna()
+
+        result.quality_flags["mean_recall_accuracy"] = float(acc.mean()) if len(acc) > 0 else float("nan")
+        result.quality_flags["recall_accuracy_range"] = (
+            (float(acc.min()), float(acc.max())) if len(acc) > 0 else (float("nan"), float("nan"))
+        )
 
         # Sanity: accuracy should be in [0, 1] or [0, 100]
-        if acc.max() > 1.5:
-            # Likely percentage — normalize
+        if len(acc) > 0 and acc.max() > 1.5:
             result.add_warning("Recall accuracy appears to be percentage (>1.0) — normalizing by /100")
 
         # Check condition column
@@ -284,7 +299,7 @@ class SubjectValidator:
             result.add_warning("Condition column not found in behavioral data")
 
         # Check for any trials with NaN accuracy
-        n_nan = df["recall_accuracy"].isna().sum()
+        n_nan = raw_col.isna().sum()
         if n_nan > 0:
             result.add_warning(f"{n_nan} trials have NaN recall accuracy")
 
